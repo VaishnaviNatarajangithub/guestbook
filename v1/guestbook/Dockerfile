@@ -1,13 +1,18 @@
-# Stage 1: Build the application
-FROM node:14 AS builder
-WORKDIR /app
-COPY package*.json ./
-RUN npm install
-COPY . .
-RUN npm run build
+FROM golang:1.15 as builder
+RUN go get github.com/codegangsta/negroni
+RUN go get github.com/gorilla/mux github.com/xyproto/simpleredis
+COPY main.go .
+RUN go build main.go
 
-# Stage 2: Serve the application using a lightweight Nginx image
-FROM nginx:alpine
-COPY --from=builder /app/build /usr/share/nginx/html
-EXPOSE 80
-CMD ["nginx", "-g", "daemon off;"]
+FROM ubuntu:18.04
+
+COPY --from=builder /go//main /app/guestbook
+
+ADD public/index.html /app/public/index.html
+ADD public/script.js /app/public/script.js
+ADD public/style.css /app/public/style.css
+ADD public/jquery.min.js /app/public/jquery.min.js
+
+WORKDIR /app
+CMD ["./guestbook"]
+EXPOSE 3000
